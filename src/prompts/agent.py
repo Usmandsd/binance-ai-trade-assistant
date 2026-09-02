@@ -3,7 +3,8 @@ Binance AI Trade Assistant
 Main agent controller.
 """
 
-from tools.market_data import get_ticker
+from tools.market_data import get_ticker, get_klines
+from tools.technical_analysis import analyze_market
 from tools.risk_analysis import calculate_risk
 
 
@@ -14,24 +15,29 @@ class BinanceTradeAssistant:
         self.name = "Binance AI Trade Assistant"
 
     def analyze(self, symbol: str) -> dict:
-        """Run the market-analysis workflow."""
+        """Run the complete market-analysis workflow."""
 
-        symbol = symbol.upper().strip().replace("/", "")
+        symbol = symbol.upper().strip()
 
         if not symbol:
             return {"error": "Please enter a valid trading pair."}
 
         try:
+            # Get current market data
             market = get_ticker(symbol)
 
-            analysis = {
-                "trend": "Pending",
-                "momentum": "Pending",
-                "rsi": 50,
-                "price": market["price"],
-            }
+            # Get historical candles
+            candles = get_klines(
+                symbol,
+                interval="1h",
+                limit=100,
+            )
 
-            risk = calculate_risk(analysis)
+            # Run technical analysis
+            technical = analyze_market(candles)
+
+            # Calculate risk
+            risk = calculate_risk(technical)
 
             return {
                 "symbol": market["symbol"],
@@ -40,8 +46,11 @@ class BinanceTradeAssistant:
                 "volume_24h": market["volume_24h"],
                 "high_24h": market["high_24h"],
                 "low_24h": market["low_24h"],
-                "trend": analysis["trend"],
-                "momentum": analysis["momentum"],
+                "trend": technical["trend"],
+                "momentum": technical["momentum"],
+                "rsi": technical["rsi"],
+                "sma_10": technical["sma_10"],
+                "sma_20": technical["sma_20"],
                 "risk_level": risk["risk_level"],
                 "risk_score": risk["risk_score"],
                 "risk_factors": risk["reasons"],
@@ -54,6 +63,8 @@ class BinanceTradeAssistant:
 
 
 def main():
+    """Run the assistant from the command line."""
+
     assistant = BinanceTradeAssistant()
 
     print("\n🤖 Binance AI Trade Assistant")
@@ -63,7 +74,7 @@ def main():
         symbol = input("Enter trading pair: ")
 
         if symbol.lower() == "exit":
-            print("Goodbye! 👋")
+            print("\nGoodbye! 👋")
             break
 
         result = assistant.analyze(symbol)
@@ -82,11 +93,25 @@ def main():
         print(f"24h High: ${result['high_24h']:,.2f}")
         print(f"24h Low: ${result['low_24h']:,.2f}")
 
+        print("\n📈 TECHNICAL ANALYSIS")
+        print(f"Trend: {result['trend']}")
+        print(f"Momentum: {result['momentum']}")
+        print(f"RSI: {result['rsi']}")
+        print(f"SMA 10: {result['sma_10']}")
+        print(f"SMA 20: {result['sma_20']}")
+
         print("\n🛡️ RISK ASSESSMENT")
         print(f"Risk Level: {result['risk_level']}")
         print(f"Risk Score: {result['risk_score']}/100")
 
-        print("\n⚠️ Educational analysis only — not financial advice.")
+        print("\nRisk Factors:")
+        for reason in result["risk_factors"]:
+            print(f"- {reason}")
+
+        print(
+            "\n⚠️ Educational analysis only — "
+            "not financial advice."
+        )
 
 
 if __name__ == "__main__":
