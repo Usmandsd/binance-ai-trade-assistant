@@ -1,5 +1,5 @@
 """
-Market data tools for Binance AI Trade Assistant.
+Binance market data tools.
 """
 
 import requests
@@ -9,10 +9,7 @@ BINANCE_API_URL = "https://api.binance.com/api/v3"
 
 
 def get_ticker(symbol: str) -> dict:
-    """
-    Get the current price and 24-hour statistics
-    for a Binance trading pair.
-    """
+    """Get current 24-hour market statistics."""
 
     symbol = symbol.upper().replace("/", "")
 
@@ -36,5 +33,46 @@ def get_ticker(symbol: str) -> dict:
     }
 
 
-if __name__ == "__main__":
-    print(get_ticker("BTCUSDT"))
+def get_klines(
+    symbol: str,
+    interval: str = "1h",
+    limit: int = 100,
+) -> list:
+    """
+    Get historical candlestick data from Binance.
+
+    Args:
+        symbol: Trading pair, e.g. BTC/USDT.
+        interval: Candle interval, e.g. 1h.
+        limit: Number of candles to retrieve.
+    """
+
+    symbol = symbol.upper().replace("/", "")
+
+    response = requests.get(
+        f"{BINANCE_API_URL}/klines",
+        params={
+            "symbol": symbol,
+            "interval": interval,
+            "limit": limit,
+        },
+        timeout=10,
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    candles = []
+
+    for candle in data:
+        candles.append([
+            candle[0],  # timestamp
+            candle[1],  # open
+            candle[2],  # high
+            candle[3],  # low
+            candle[4],  # close
+            candle[5],  # volume
+        ])
+
+    return candles
